@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据采集平台 - 首页</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="home-style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🎯 数据采集平台</h1>
+            <p>一站式数据采集与分析解决方案</p>
+            
+            <!-- 后端状态指示器 -->
+            <div class="backend-status" :class="{ 'offline': !backendOnline, 'checking': checking }">
+                <span class="status-dot" :class="{ 'online': backendOnline, 'offline': !backendOnline }"></span>
+                <span class="status-text">{{ checking ? '检测中...' : (backendOnline ? '后端服务运行中' : '后端服务已断开') }}</span>
+            </div>
+        </div>
+        
+        <!-- 后端断开提示 -->
+        <div v-if="!backendOnline && !checking" class="backend-offline-notice">
+            <div class="offline-icon">⚠️</div>
+            <div class="offline-content">
+                <h3>后端服务未连接</h3>
+                <p>请启动后端服务后刷新页面</p>
+                <p class="offline-hint">提示：运行 start_backend.bat 或 python backend/api.py</p>
+            </div>
+        </div>
+        
+        <!-- 功能模块容器 -->
+        <div class="modules-container">
+            <!-- 当当网图书爬虫模块 -->
+            <div class="module-card" :class="{ 'disabled': !backendOnline }" @click="goToCrawler">
+                <div class="module-icon">📚</div>
+                <h2 class="module-title">当当网图书爬虫</h2>
+                <p class="module-desc">搜索并采集当当网图书信息，支持批量爬取和数据存储</p>
+                <div class="module-features">
+                    <span class="feature-tag">关键词搜索</span>
+                    <span class="feature-tag">批量采集</span>
+                    <span class="feature-tag">数据库存储</span>
+                </div>
+                <div class="module-action">
+                    <button class="action-btn" :disabled="!backendOnline">
+                        {{ backendOnline ? '进入模块 →' : '需要后端服务' }}
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 预留模块1 -->
+            <div class="module-card disabled" @click="showComingSoon">
+                <div class="module-icon">🛒</div>
+                <h2 class="module-title">电商数据采集</h2>
+                <p class="module-desc">采集主流电商平台商品信息，价格监控与分析</p>
+                <div class="module-features">
+                    <span class="feature-tag">多平台</span>
+                    <span class="feature-tag">价格监控</span>
+                    <span class="feature-tag">数据对比</span>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge">即将上线</span>
+                </div>
+            </div>
+            
+            <!-- 预留模块2 -->
+            <div class="module-card disabled" @click="showComingSoon">
+                <div class="module-icon">📰</div>
+                <h2 class="module-title">新闻资讯采集</h2>
+                <p class="module-desc">实时采集新闻资讯，支持关键词订阅和智能分类</p>
+                <div class="module-features">
+                    <span class="feature-tag">实时采集</span>
+                    <span class="feature-tag">智能分类</span>
+                    <span class="feature-tag">关键词订阅</span>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge">即将上线</span>
+                </div>
+            </div>
+            
+            <!-- 预留模块3 -->
+            <div class="module-card disabled" @click="showComingSoon">
+                <div class="module-icon">📊</div>
+                <h2 class="module-title">数据分析中心</h2>
+                <p class="module-desc">对采集的数据进行可视化分析，生成报表和图表</p>
+                <div class="module-features">
+                    <span class="feature-tag">可视化</span>
+                    <span class="feature-tag">报表生成</span>
+                    <span class="feature-tag">趋势分析</span>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge">即将上线</span>
+                </div>
+            </div>
+            
+            <!-- 预留模块4 -->
+            <div class="module-card disabled" @click="showComingSoon">
+                <div class="module-icon">⚙️</div>
+                <h2 class="module-title">任务管理</h2>
+                <p class="module-desc">定时任务配置，自动化数据采集和处理</p>
+                <div class="module-features">
+                    <span class="feature-tag">定时任务</span>
+                    <span class="feature-tag">自动化</span>
+                    <span class="feature-tag">任务监控</span>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge">即将上线</span>
+                </div>
+            </div>
+            
+            <!-- 预留模块5 -->
+            <div class="module-card disabled" @click="showComingSoon">
+                <div class="module-icon">🔍</div>
+                <h2 class="module-title">数据检索</h2>
+                <p class="module-desc">快速检索已采集的数据，支持多条件筛选</p>
+                <div class="module-features">
+                    <span class="feature-tag">全文检索</span>
+                    <span class="feature-tag">高级筛选</span>
+                    <span class="feature-tag">导出数据</span>
+                </div>
+                <div class="module-status">
+                    <span class="status-badge">即将上线</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>© 2024 数据采集平台 | 版本 1.0.0</p>
+        </div>
+    </div>
+    
+    <script src="home-app.js"></script>
+</body>
+</html>

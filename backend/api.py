@@ -189,9 +189,9 @@ async def root():
     }
 
 
-@app.get("/health")
+@app.get("/health", include_in_schema=False)
 async def health_check():
-    """健康检查"""
+    """健康检查（不记录访问日志）"""
     return {"status": "healthy"}
 
 
@@ -411,6 +411,16 @@ def cleanup():
 if __name__ == "__main__":
     import signal
     import atexit
+    import logging
+    
+    # 配置日志过滤器，过滤掉 /health 请求的日志
+    class HealthCheckFilter(logging.Filter):
+        def filter(self, record):
+            # 过滤掉包含 /health 的日志
+            return '/health' not in record.getMessage()
+    
+    # 获取 uvicorn 的访问日志记录器并添加过滤器
+    logging.getLogger("uvicorn.access").addFilter(HealthCheckFilter())
     
     # 注册退出时的清理函数
     atexit.register(cleanup)

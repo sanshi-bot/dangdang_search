@@ -15,7 +15,7 @@ timeout /t 8 /nobreak >nul
 echo.
 echo 正在打开前端页面...
 echo （前端会自动检测后端端口）
-start "" "frontend/index.html"
+start "" "frontend/home.html"
 echo.
 echo ====================================
 echo 启动完成！

@@ -72,6 +72,13 @@ createApp({
     
     methods: {
         /**
+         * 返回首页
+         */
+        goHome() {
+            window.location.href = 'home.html';
+        },
+        
+        /**
          * 检查后端是否在线
          */
         async checkBackendHealth() {
@@ -104,12 +111,43 @@ createApp({
                     this.loading = false;
                     
                     // 显示断开提示
-                    this.error = '后端服务已断开连接，请重新启动后端程序';
+                    this.error = '后端服务已断开连接，3秒后将返回首页...';
                     
-                    console.log('🔄 已清空所有数据，恢复到初始状态');
+                    console.log('🔄 已清空所有数据，准备返回首页');
+                    
+                    // 3秒后自动跳转到首页
+                    setTimeout(() => {
+                        console.log('🏠 正在跳转到首页...');
+                        window.location.href = 'home.html';
+                    }, 3000);
+                    
+                    // 后端断开后，增加检测频率（每5秒检测一次）
+                    this.startFastHeartbeat();
                 }
                 return false;
             }
+        },
+        
+        /**
+         * 启动快速心跳检测（后端断开时使用）
+         */
+        startFastHeartbeat() {
+            // 清除旧的定时器
+            if (this.heartbeatTimer) {
+                clearInterval(this.heartbeatTimer);
+            }
+            
+            // 每5秒检测一次，用于快速发现后端恢复
+            this.heartbeatTimer = setInterval(() => {
+                this.checkBackendHealth();
+                
+                // 如果后端恢复，切换回正常心跳
+                if (this.backendOnline) {
+                    this.startHeartbeat();
+                }
+            }, 5000);
+            
+            console.log('💓 快速心跳检测已启动（间隔5秒，等待后端恢复）');
         },
         
         /**
@@ -121,12 +159,15 @@ createApp({
                 clearInterval(this.heartbeatTimer);
             }
             
-            // 每5秒检测一次
+            // 每15秒检测一次（从5秒改为15秒，减少资源消耗）
             this.heartbeatTimer = setInterval(() => {
-                this.checkBackendHealth();
-            }, 5000);
+                // 只在有数据展示或正在加载时才检测
+                if (this.books.length > 0 || this.loading) {
+                    this.checkBackendHealth();
+                }
+            }, 15000);
             
-            console.log('💓 心跳检测已启动');
+            console.log('💓 心跳检测已启动（间隔15秒）');
         },
         
         /**
@@ -417,8 +458,20 @@ createApp({
                 console.warn(`注意：后端运行在端口 ${port}，而不是默认的 8001`);
             }
             
-            // 启动心跳检测
-            this.startHeartbeat();
+            // 检查后端是否在线
+            this.checkBackendHealth().then(isOnline => {
+                if (!isOnline) {
+                    // 如果后端不在线，3秒后跳转到首页
+                    console.warn('⚠️ 后端服务未启动，3秒后将返回首页');
+                    this.error = '后端服务未启动，3秒后将返回首页...';
+                    setTimeout(() => {
+                        window.location.href = 'home.html';
+                    }, 3000);
+                } else {
+                    // 启动心跳检测
+                    this.startHeartbeat();
+                }
+            });
         });
     },
     
