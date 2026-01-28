@@ -1,0 +1,32 @@
+# ==========================================
+# 当当网图书爬虫 Web 应用依赖
+# ==========================================
+
+# Python 3.13+ 需要 setuptools (替代已移除的 distutils)
+setuptools>=65.0.0
+
+# 爬虫框架
+feapder[all]>=1.8.0
+
+# Web 框架
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# 异步支持
+asyncio-compat>=0.1.0
+
+# HTTP 请求（feapder 已包含 requests）
+# requests>=2.31.0
+
+# 数据解析（feapder 已包含 lxml）
+# lxml>=4.9.0
+
+# 可选：数据库支持（如需保存数据）
+pymysql>=1.1.0
+DBUtils>=3.0.0
+# redis>=5.0.0
+# pymongo>=4.5.0
+
+# 可选：日志增强
+# loguru>=0.7.0

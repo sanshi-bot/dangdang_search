@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>当当网图书爬虫</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📚 当当网图书爬虫</h1>
+            <p>输入关键词，一键搜索图书信息</p>
+            <!-- 后端状态指示器 -->
+            <div class="backend-status" :class="{ 'offline': !backendOnline }">
+                <span class="status-dot" :class="{ 'online': backendOnline, 'offline': !backendOnline }"></span>
+                <span class="status-text">{{ backendOnline ? '后端服务运行中' : '后端服务已断开' }}</span>
+            </div>
+        </div>
+        
+        <!-- 搜索容器 -->
+        <div class="search-container">
+            <div class="search-box">
+                <input 
+                    v-model="keyword" 
+                    @keyup.enter="crawl"
+                    class="search-input" 
+                    type="text" 
+                    placeholder="请输入图书关键词，例如：Python、机器学习、小说..."
+                    :disabled="loading"
+                >
+                <input 
+                    v-model.number="maxBooks" 
+                    class="search-input-small" 
+                    type="number" 
+                    min="0" 
+                    max="500" 
+                    placeholder="数量"
+                    :disabled="loading"
+                    title="爬取图书数量（0表示爬取所有，1-500本）"
+                >
+                <input 
+                    v-model="proxy" 
+                    class="search-input-proxy" 
+                    type="text" 
+                    placeholder="代理（可选）"
+                    :disabled="loading"
+                    title="代理地址，格式：http://ip:port 或 https://ip:port"
+                >
+                <button 
+                    @click="crawl" 
+                    class="search-btn crawl-btn"
+                    :disabled="loading || !keyword.trim()"
+                >
+                    {{ loading ? '爬取中...' : '开始爬取' }}
+                </button>
+                <button 
+                    @click="showBooks" 
+                    class="search-btn show-btn"
+                    :disabled="loading"
+                >
+                    展示数据
+                </button>
+            </div>
+            <div class="hint-text">
+                提示：输入 0 表示爬取所有数据（包括所有翻页），1-500 表示限制爬取数量。代理格式：http://127.0.0.1:7890
+            </div>
+        </div>
+        
+        <!-- 错误提示 -->
+        <div v-if="error" class="error-message">
+            {{ error }}
+        </div>
+        
+        <!-- 后端断开提示（更明显） -->
+        <div v-if="!backendOnline" class="backend-offline-notice">
+            <div class="offline-icon">⚠️</div>
+            <div class="offline-content">
+                <h3>后端服务未连接</h3>
+                <p>请启动后端服务后刷新页面</p>
+                <p class="offline-hint">提示：运行 start_backend.bat 或 python backend/api.py</p>
+            </div>
+        </div>
+        
+        <!-- 加载动画 -->
+        <div v-if="loading" class="loading">
+            <div class="spinner"></div>
+            <p>正在爬取数据，请稍候...</p>
+        </div>
+        
+        <!-- 统计信息 -->
+        <div v-if="!loading && books.length > 0" class="stats">
+            <span>{{ currentKeyword ? `关键词：${currentKeyword}` : '全部图书' }}</span>
+            <span>{{ pageInfo }}</span>
+            <span v-if="dataSource">数据来源：{{ dataSource }}</span>
+        </div>
+        
+        <!-- 结果展示 - 表格形式 -->
+        <div v-if="!loading && books.length > 0" class="table-container">
+            <table class="books-table">
+                <thead>
+                    <tr>
+                        <th width="5%">序号</th>
+                        <th width="30%">标题</th>
+                        <th width="12%">作者</th>
+                        <th width="15%">出版社</th>
+                        <th width="10%">出版时间</th>
+                        <th width="8%">现价</th>
+                        <th width="8%">评分</th>
+                        <th width="12%">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(book, index) in paginatedBooks" :key="book.ISBN || book.详情页URL || index">
+                        <td class="text-center">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+                        <td class="book-title-cell" :title="book.标题">{{ book.标题 }}</td>
+                        <td :title="book.作者">{{ book.作者 || '-' }}</td>
+                        <td :title="book.出版社">{{ book.出版社 || '-' }}</td>
+                        <td class="text-center">{{ book.出版时间 || '-' }}</td>
+                        <td class="text-center price-cell">{{ book.现价 || '-' }}</td>
+                        <td class="text-center">
+                            <span v-if="book.评分">{{ book.评分 }}</span>
+                            <span v-else>-</span>
+                        </td>
+                        <td class="text-center">
+                            <a v-if="book.详情页URL" :href="book.详情页URL" target="_blank" class="detail-link">
+                                查看详情
+                            </a>
+                            <span v-else>-</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- 分页控件 -->
+            <div class="pagination">
+                <button 
+                    @click="prevPage" 
+                    :disabled="currentPage === 1"
+                    class="page-btn"
+                >
+                    上一页
+                </button>
+                
+                <div class="page-numbers">
+                    <button 
+                        v-for="page in totalPages" 
+                        :key="page"
+                        @click="goToPage(page)"
+                        :class="['page-number', { active: currentPage === page }]"
+                        v-show="Math.abs(page - currentPage) <= 2 || page === 1 || page === totalPages"
+                    >
+                        {{ page }}
+                    </button>
+                </div>
+                
+                <button 
+                    @click="nextPage" 
+                    :disabled="currentPage === totalPages"
+                    class="page-btn"
+                >
+                    下一页
+                </button>
+            </div>
+        </div>
+        
+        <!-- 无结果提示 -->
+        <div v-if="!loading && searched && books.length === 0" class="no-results">
+            <p>😔 没有找到相关图书，请尝试其他关键词</p>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
