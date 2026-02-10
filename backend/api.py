@@ -18,17 +18,18 @@ try:
     from pydantic import BaseModel, Field
     import uvicorn
 except ImportError as e:
-    print("="*60)
-    print("❌ 缺少必要的依赖包！")
-    print("="*60)
-    print(f"错误信息: {e}")
-    print()
-    print("请运行以下命令安装依赖：")
-    print("pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn[standard] pydantic")
-    print()
-    print("或者运行：")
-    print("pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt")
-    print("="*60)
+    # print("="*60)
+    pass
+    # print("❌ 缺少必要的依赖包！")
+    # print("="*60)
+    # print(f"错误信息: {e}")
+    # print()
+    # print("请运行以下命令安装依赖：")
+    # print("pip install -i https://pypi.tuna.tsinghua.edu.cn/simple fastapi uvicorn[standard] pydantic")
+    # print()
+    # print("或者运行：")
+    # print("pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt")
+    # print("="*60)
     sys.exit(1)
 
 # 添加父目录到路径，以便导入 dangdang 模块
@@ -56,15 +57,16 @@ try:
     from db_config import MYSQL_CONFIG, USE_MYSQL
     from mysql_pool import MySQLPool
 except ImportError as e:
-    print("="*60)
-    print("❌ 导入 dangdang 模块失败！")
-    print("="*60)
-    print(f"错误信息: {e}")
-    print(f"当前路径: {os.getcwd()}")
-    print(f"父目录: {parent_dir}")
-    print()
-    print("请确保 dangdang.py 文件存在于项目根目录")
-    print("="*60)
+    # print("="*60)
+    pass
+    # print("❌ 导入 dangdang 模块失败！")
+    # print("="*60)
+    # print(f"错误信息: {e}")
+    # print(f"当前路径: {os.getcwd()}")
+    # print(f"父目录: {parent_dir}")
+    # print()
+    # print("请确保 dangdang.py 文件存在于项目根目录")
+    # print("="*60)
     sys.exit(1)
 
 
@@ -88,8 +90,9 @@ if USE_MYSQL:
             maxconnections=20
         )
     except Exception as e:
-        print(f"⚠️ MySQL 连接池初始化失败: {e}")
-        print("⚠️ 将禁用数据库存储功能")
+        # print(f"⚠️ MySQL 连接池初始化失败: {e}")
+        pass
+        # print("⚠️ 将禁用数据库存储功能")
         USE_MYSQL = False
 
 # 配置 CORS - 允许前端跨域访问
@@ -220,23 +223,27 @@ async def crawl_books(request: SearchRequest):
         raise HTTPException(status_code=400, detail="爬取数量必须在 0-500 之间（0表示爬取所有）")
     
     if max_books == 0:
-        print(f"\n{'='*60}")
-        print(f"📥 收到爬取请求: 关键词='{keyword}', 模式=无限制（爬取所有）")
+        # print(f"\n{'='*60}")
+        pass
+        # print(f"📥 收到爬取请求: 关键词='{keyword}', 模式=无限制（爬取所有）")
         if proxy:
-            print(f"🔒 代理设置: {proxy}")
-        print(f"{'='*60}\n")
+            # print(f"🔒 代理设置: {proxy}")
+            pass
+        # print(f"{'='*60}\n")
     else:
-        print(f"\n{'='*60}")
-        print(f"📥 收到爬取请求: 关键词='{keyword}', 数量={max_books}")
+        # print(f"\n{'='*60}")
+        pass
+        # print(f"📥 收到爬取请求: 关键词='{keyword}', 数量={max_books}")
         if proxy:
-            print(f"🔒 代理设置: {proxy}")
-        print(f"{'='*60}\n")
+            # print(f"🔒 代理设置: {proxy}")
+            pass
+        # print(f"{'='*60}\n")
     
     try:
         # 在线程池中异步运行爬虫，避免阻塞主线程
         loop = asyncio.get_event_loop()
         
-        print("🔄 开始执行爬虫任务...")
+        # print("🔄 开始执行爬虫任务...")
         
         # 使用 asyncio.wait_for 添加超时保护
         try:
@@ -252,14 +259,15 @@ async def crawl_books(request: SearchRequest):
                         proxy=proxy
                     )
                 ),
-                timeout=180.0  # 3分钟超时（作为最后的保护）
+                timeout=90.0  # 90秒超时（从180秒减少）
             )
         except asyncio.TimeoutError:
-            print("⚠️ 爬虫任务超时，强制返回")
+            # print("⚠️ 爬虫任务超时，强制返回")
+            pass
             # 超时后返回空结果
             results = []
         
-        print(f"🔄 爬虫任务执行完毕，返回 {len(results) if results else 0} 条结果")
+        # print(f"🔄 爬虫任务执行完毕，返回 {len(results) if results else 0} 条结果")
         
         # 确保 results 不为 None
         if results is None:
@@ -273,13 +281,13 @@ async def crawl_books(request: SearchRequest):
         
         books = results.get('books', [])
         
-        print(f"\n{'='*60}")
-        print(f"✅ 爬取请求完成:")
-        print(f"   爬取数量: {results.get('total_crawled', 0)} 本")
-        print(f"   保存数量: {results.get('total_saved', 0)} 本")
-        print(f"   去重数量: {results.get('total_duplicates', 0)} 本")
-        print(f"   去重关键词: {results.get('dedup_key', '标题 + 作者')}")
-        print(f"{'='*60}\n")
+        # print(f"\n{'='*60}")
+        # print(f"✅ 爬取请求完成:")
+        # print(f"   爬取数量: {results.get('total_crawled', 0)} 本")
+        # print(f"   保存数量: {results.get('total_saved', 0)} 本")
+        # print(f"   去重数量: {results.get('total_duplicates', 0)} 本")
+        # print(f"   去重关键词: {results.get('dedup_key', '标题 + 作者')}")
+        # print(f"{'='*60}\n")
         
         response_data = SearchResponse(
             success=True,
@@ -292,13 +300,14 @@ async def crawl_books(request: SearchRequest):
             dedup_key=results.get('dedup_key', '标题 + 作者')
         )
         
-        print(f"📤 准备返回响应: success={response_data.success}, count={response_data.count}, saved={response_data.total_saved}")
+        # print(f"📤 准备返回响应: success={response_data.success}, count={response_data.count}, saved={response_data.total_saved}")
         return response_data
     
     except asyncio.TimeoutError:
-        print(f"\n{'='*60}")
-        print(f"⚠️ 请求超时")
-        print(f"{'='*60}\n")
+        # print(f"\n{'='*60}")
+        pass
+        # print(f"⚠️ 请求超时")
+        # print(f"{'='*60}\n")
         raise HTTPException(
             status_code=504,
             detail="爬取超时，请减少爬取数量或稍后重试"
@@ -306,11 +315,11 @@ async def crawl_books(request: SearchRequest):
     
     except Exception as e:
         # 记录错误日志
-        print(f"\n{'='*60}")
-        print(f"❌ 爬取错误: {str(e)}")
+        # print(f"\n{'='*60}")
+        # print(f"❌ 爬取错误: {str(e)}")
         import traceback
         traceback.print_exc()
-        print(f"{'='*60}\n")
+        # print(f"{'='*60}\n")
         
         raise HTTPException(
             status_code=500,
@@ -345,7 +354,7 @@ async def get_books_from_db(keyword: Optional[str] = None, limit: int = 100):
         )
     
     except Exception as e:
-        print(f"数据库查询错误: {str(e)}")
+        # print(f"数据库查询错误: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"数据库查询失败: {str(e)}"
@@ -377,7 +386,7 @@ async def get_stats():
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """全局异常处理"""
-    print(f"全局异常: {str(exc)}")
+    # print(f"全局异常: {str(exc)}")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -389,23 +398,25 @@ async def global_exception_handler(request, exc):
 
 def cleanup():
     """清理资源"""
-    print("\n🧹 正在清理资源...")
+    # print("\n🧹 正在清理资源...")
     
     # 关闭线程池
     try:
         executor.shutdown(wait=False, cancel_futures=True)
-        print("✅ 线程池已关闭")
+        # print("✅ 线程池已关闭")
     except Exception as e:
-        print(f"⚠️ 关闭线程池失败: {e}")
+        # print(f"⚠️ 关闭线程池失败: {e}")
+        pass
     
     # 关闭数据库连接池
     if USE_MYSQL:
         try:
             if MySQLPool._pool:
                 MySQLPool._pool.close()
-                print("✅ 数据库连接池已关闭")
+                # print("✅ 数据库连接池已关闭")
         except Exception as e:
-            print(f"⚠️ 关闭数据库连接池失败: {e}")
+            # print(f"⚠️ 关闭数据库连接池失败: {e}")
+            pass
 
 
 if __name__ == "__main__":
@@ -427,10 +438,10 @@ if __name__ == "__main__":
     
     # 注册信号处理器
     def signal_handler(sig, frame):
-        print("\n")
-        print("="*60)
-        print("🛑 收到中断信号，正在停止服务器...")
-        print("="*60)
+        # print("\n")
+        # print("="*60)
+        # print("🛑 收到中断信号，正在停止服务器...")
+        # print("="*60)
         cleanup()
         sys.exit(0)
     
@@ -441,31 +452,33 @@ if __name__ == "__main__":
     port = find_available_port(8001, 10)
     
     if port is None:
-        print("="*60)
-        print("❌ 错误：无法找到可用端口（8000-8009 都被占用）")
-        print("="*60)
-        print("请关闭占用端口的程序")
-        print("="*60)
+        # print("="*60)
+        pass
+        # print("❌ 错误：无法找到可用端口（8000-8009 都被占用）")
+        # print("="*60)
+        # print("请关闭占用端口的程序")
+        # print("="*60)
         sys.exit(1)
     
-    print("="*60)
-    print("🚀 当当网图书爬虫 API 启动中...")
-    print("="*60)
-    print(f"📍 API 地址: http://127.0.0.1:{port}")
-    print(f"📍 API 文档: http://127.0.0.1:{port}/docs")
-    print(f"📍 健康检查: http://127.0.0.1:{port}/health")
-    print(f"📍 爬取接口: http://127.0.0.1:{port}/api/crawl")
-    print(f"📍 展示接口: http://127.0.0.1:{port}/api/books")
-    print(f"📍 统计接口: http://127.0.0.1:{port}/api/stats")
+    # print("="*60)
+    # print("🚀 当当网图书爬虫 API 启动中...")
+    # print("="*60)
+    # print(f"📍 API 地址: http://127.0.0.1:{port}")
+    # print(f"📍 API 文档: http://127.0.0.1:{port}/docs")
+    # print(f"📍 健康检查: http://127.0.0.1:{port}/health")
+    # print(f"📍 爬取接口: http://127.0.0.1:{port}/api/crawl")
+    # print(f"📍 展示接口: http://127.0.0.1:{port}/api/books")
+    # print(f"📍 统计接口: http://127.0.0.1:{port}/api/stats")
     
     if port != 8000:
-        print(f"⚠️  注意：端口 8000 被占用，使用端口 {port}")
-        print(f"⚠️  请修改前端 app.js 中的 API_BASE_URL 为: http://127.0.0.1:{port}")
+        # print(f"⚠️  注意：端口 8000 被占用，使用端口 {port}")
+        pass
+        # print(f"⚠️  请修改前端 app.js 中的 API_BASE_URL 为: http://127.0.0.1:{port}")
     
-    print("="*60)
-    print("按 Ctrl+C 停止服务器")
-    print("="*60)
-    print()
+    # print("="*60)
+    # print("按 Ctrl+C 停止服务器")
+    # print("="*60)
+    # print()
     
     try:
         uvicorn.run(
@@ -476,15 +489,17 @@ if __name__ == "__main__":
             access_log=True
         )
     except KeyboardInterrupt:
-        print("\n")
-        print("="*60)
-        print("✅ 服务器已停止")
-        print("="*60)
+        # print("\n")
+        pass
+        # print("="*60)
+        # print("✅ 服务器已停止")
+        # print("="*60)
     except Exception as e:
-        print("\n")
-        print("="*60)
-        print(f"❌ 服务器启动失败: {e}")
-        print("="*60)
+        # print("\n")
+        pass
+        # print("="*60)
+        # print(f"❌ 服务器启动失败: {e}")
+        # print("="*60)
         sys.exit(1)
     finally:
         cleanup()

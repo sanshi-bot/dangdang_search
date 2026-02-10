@@ -72,7 +72,7 @@ class DangDangSpider(feapder.AirSpider):
                 "http": self.proxy,
                 "https": self.proxy
             }
-            print(f"🔒 使用代理: {self.proxy}")
+            # print(f"🔒 使用代理: {self.proxy}")
         
         yield Request(**request_kwargs)
     
@@ -81,7 +81,7 @@ class DangDangSpider(feapder.AirSpider):
         解析搜索结果页
         提取图书列表和详情页链接
         """
-        print(f"📄 正在解析搜索页: {response.url}")
+        # print(f"📄 正在解析搜索页: {response.url}")
         
         # 提取图书列表
         # 方式1: 大图模式
@@ -95,7 +95,7 @@ class DangDangSpider(feapder.AirSpider):
             # 方式3: 其他可能的列表
             book_items = response.xpath('//div[@id="search_nature_rg"]//li[@class="line1"]')
         
-        print(f"📚 找到 {len(book_items)} 个图书项")
+        # print(f"📚 找到 {len(book_items)} 个图书项")
         
         # 检查是否应该停止
         if self._stop_flag:
@@ -105,14 +105,17 @@ class DangDangSpider(feapder.AirSpider):
         if not self.is_unlimited and self.saved_count >= self.target_new_books:
             # 已达到目标，不再处理
             if self.skipped_count == 0:
-                print(f"\n⏭️  已达到目标，跳过搜索页处理")
+                # print(f"\n⏭️  已达到目标，跳过搜索页处理")
+                pass
             return
         
         # 检查是否超过最大爬取限制
         if self.crawled_count >= self.max_crawl_limit:
             # 已达到限制
             if self.skipped_count == 0:
-                print(f"\n⏭️  已达到最大爬取限制，跳过搜索页处理")
+                # print(f"\n⏭️  已达到最大爬取限制，跳过搜索页处理")
+                pass
+            return
             return
         
         # 处理图书项
@@ -190,9 +193,11 @@ class DangDangSpider(feapder.AirSpider):
             next_page = response.xpath('//li[@class="next"]/a/@href').extract_first()
             if next_page:
                 if self.is_unlimited:
-                    print(f"📄 无限制模式，继续翻页: {next_page}")
+                    # print(f"📄 无限制模式，继续翻页: {next_page}")
+                    pass
                 else:
-                    print(f"📄 新增数量 {self.saved_count}/{self.target_new_books}，继续翻页: {next_page}")
+                    # print(f"📄 新增数量 {self.saved_count}/{self.target_new_books}，继续翻页: {next_page}")
+                    pass
                 
                 # 构建请求参数
                 request_kwargs = {
@@ -211,9 +216,11 @@ class DangDangSpider(feapder.AirSpider):
                 yield Request(**request_kwargs)
             else:
                 if self.is_unlimited:
-                    print(f"📄 已到最后一页，无更多数据")
+                    # print(f"📄 已到最后一页，无更多数据")
+                    pass
                 else:
-                    print(f"📄 已到最后一页，实际新增 {self.saved_count} 本（目标 {self.target_new_books} 本）")
+                    # print(f"📄 已到最后一页，实际新增 {self.saved_count} 本（目标 {self.target_new_books} 本）")
+                    pass
 
     def parse_detail_page(self, request, response):
         """
@@ -227,14 +234,16 @@ class DangDangSpider(feapder.AirSpider):
                 self.skipped_count += 1
                 # 只在第一次跳过时打印提示
                 if self.skipped_count == 1:
-                    print(f"\n⏭️  已达到目标新增数量 {self.target_new_books}，后续请求将被跳过...")
+                    # print(f"\n⏭️  已达到目标新增数量 {self.target_new_books}，后续请求将被跳过...")
+                    pass
                 return
             
             # 检查是否超过最大爬取限制
             if self.crawled_count >= self.max_crawl_limit:
                 self.skipped_count += 1
                 if self.skipped_count == 1:
-                    print(f"\n⏭️  已达到最大爬取限制 {self.max_crawl_limit}，后续请求将被跳过...")
+                    # print(f"\n⏭️  已达到最大爬取限制 {self.max_crawl_limit}，后续请求将被跳过...")
+                    pass
                 return
             
             # 检查停止标志
@@ -243,7 +252,7 @@ class DangDangSpider(feapder.AirSpider):
                 return
             
             # 打印正在解析的URL
-            print(f"🔍 正在解析详情页: {response.url}")
+            # print(f"🔍 正在解析详情页: {response.url}")
             
             # 从meta中获取搜索页的基本信息
             basic_title = request.meta.get("title", "")
@@ -335,7 +344,7 @@ class DangDangSpider(feapder.AirSpider):
             }
             
             # 打印提取的信息用于调试
-            print(f"📖 提取信息: 标题={title}, 作者={author}, 出版社={publisher}, 出版时间={publish_date}, 评分={rating}")
+            # print(f"📖 提取信息: 标题={title}, 作者={author}, 出版社={publisher}, 出版时间={publish_date}, 评分={rating}")
             
             # 存储到内存
             self.results.append(book_data)
@@ -350,16 +359,20 @@ class DangDangSpider(feapder.AirSpider):
                         self.saved_count += 1
                         is_new = True
                         if self.is_unlimited:
-                            print(f"💾 成功保存到数据库（已新增: {self.saved_count}，已爬取: {self.crawled_count}）")
+                            # print(f"💾 成功保存到数据库（已新增: {self.saved_count}，已爬取: {self.crawled_count}）")
+                            pass
                         else:
-                            print(f"💾 成功保存到数据库（已新增: {self.saved_count}/{self.target_new_books}，已爬取: {self.crawled_count}）")
+                            # print(f"💾 成功保存到数据库（已新增: {self.saved_count}/{self.target_new_books}，已爬取: {self.crawled_count}）")
+                            pass
                     elif result['is_duplicate']:
                         self.duplicate_count += 1
-                        print(f"⚠️ 图书重复，已跳过（去重: {self.duplicate_count}，已爬取: {self.crawled_count}）")
+                        # print(f"⚠️ 图书重复，已跳过（去重: {self.duplicate_count}，已爬取: {self.crawled_count}）")
                     else:
-                        print(f"⚠️ 保存到数据库失败: {result['message']}")
+                        # print(f"⚠️ 保存到数据库失败: {result['message']}")
+                        pass
                 except Exception as e:
-                    print(f"⚠️ 保存到数据库失败: {e}")
+                    # print(f"⚠️ 保存到数据库失败: {e}")
+                    pass
             else:
                 # 不使用数据库时，所有数据都算新增
                 self.saved_count += 1
@@ -367,28 +380,33 @@ class DangDangSpider(feapder.AirSpider):
             
             # 显示进度
             if self.is_unlimited:
-                print(f"✅ 已爬取 {self.crawled_count} 本图书（新增: {self.saved_count}，重复: {self.duplicate_count}）")
+                # print(f"✅ 已爬取 {self.crawled_count} 本图书（新增: {self.saved_count}，重复: {self.duplicate_count}）")
+                pass
             else:
-                print(f"✅ 已爬取 {self.crawled_count} 本图书（新增: {self.saved_count}/{self.target_new_books}，重复: {self.duplicate_count}）")
+                # print(f"✅ 已爬取 {self.crawled_count} 本图书（新增: {self.saved_count}/{self.target_new_books}，重复: {self.duplicate_count}）")
+                pass
             
             # 检查是否达到目标（非无限制模式）
             if not self.is_unlimited and self.saved_count >= self.target_new_books:
                 # 只在刚达到目标时打印一次
                 if not self._stop_flag:
-                    print(f"\n{'='*60}")
-                    print(f"🎉 已完成目标！成功新增 {self.saved_count} 本图书")
-                    print(f"📊 总爬取: {self.crawled_count} 本，去重: {self.duplicate_count} 本")
-                    print(f"🛑 正在停止爬虫...")
-                    print(f"{'='*60}\n")
+                    # print(f"\n{'='*60}")
+                    pass
+                    # print(f"🎉 已完成目标！成功新增 {self.saved_count} 本图书")
+                    # print(f"📊 总爬取: {self.crawled_count} 本，去重: {self.duplicate_count} 本")
+                    # print(f"🛑 正在停止爬虫...")
+                    # print(f"{'='*60}\n")
                     # 主动停止爬虫
                     self._stop_crawling()
                 return
         
         except Exception as e:
-            print(f"❌ 解析详情页失败: {e}")
+            # print(f"❌ 解析详情页失败: {e}")
+            pass
             import traceback
             traceback.print_exc()
             # 继续处理其他页面，不中断爬虫
+            pass
     
     def _stop_crawling(self):
         """停止爬虫的内部方法"""
@@ -398,17 +416,19 @@ class DangDangSpider(feapder.AirSpider):
         
         try:
             self._stop_flag = True
-            print("🛑 爬虫已停止")
+            # print("🛑 爬虫已停止")
             
             # 打印跳过统计
             if self.skipped_count > 0:
-                print(f"📊 跳过了 {self.skipped_count} 个已在队列中的请求")
+                # print(f"📊 跳过了 {self.skipped_count} 个已在队列中的请求")
+                pass
             
             # 调用父类的停止方法
             if hasattr(self, '_spider') and self._spider:
                 self._spider.stop()
         except Exception as e:
-            print(f"⚠️ 停止爬虫时出错: {e}")
+            # print(f"⚠️ 停止爬虫时出错: {e}")
+            pass
     
     def stop(self):
         """停止爬虫（公共方法）"""
@@ -428,20 +448,24 @@ def run_spider(keyword: str, thread_count: int = 3, use_mysql: bool = True, mysq
     import time
     import threading
     
-    print("\n" + "="*60)
-    print(f"🚀 开始爬取关键词: {keyword}")
-    print(f"📊 线程数: {thread_count}")
+    # print("\n" + "="*60)
+    # print(f"🚀 开始爬取关键词: {keyword}")
+    # print(f"📊 线程数: {thread_count}")
     if max_books == 0:
-        print(f"📚 爬取模式: 无限制（爬取所有数据）")
+        # print(f"📚 爬取模式: 无限制（爬取所有数据）")
+        pass
     else:
-        print(f"📚 目标新增数量: {max_books} 本")
-        print(f"📌 说明: 会持续爬取直到新增 {max_books} 本到数据库（自动去重）")
-    print(f"💾 数据库存储: {'启用' if use_mysql else '禁用'}")
+        # print(f"📚 目标新增数量: {max_books} 本")
+        pass
+        # print(f"📌 说明: 会持续爬取直到新增 {max_books} 本到数据库（自动去重）")
+    # print(f"💾 数据库存储: {'启用' if use_mysql else '禁用'}")
     if proxy:
-        print(f"🔒 代理设置: {proxy}")
+        # print(f"🔒 代理设置: {proxy}")
+        pass
     else:
-        print(f"🔒 代理设置: 未使用")
-    print("="*60 + "\n")
+        # print(f"🔒 代理设置: 未使用")
+        pass
+    # print("="*60 + "\n")
     
     # 如果使用 MySQL，先初始化连接池
     if use_mysql:
@@ -462,7 +486,8 @@ def run_spider(keyword: str, thread_count: int = 3, use_mysql: bool = True, mysq
                 maxconnections=20
             )
         except Exception as e:
-            print(f"⚠️ 连接池初始化失败: {e}")
+            # print(f"⚠️ 连接池初始化失败: {e}")
+            pass
             use_mysql = False
     
     spider = None
@@ -477,32 +502,40 @@ def run_spider(keyword: str, thread_count: int = 3, use_mysql: bool = True, mysq
             proxy=proxy
         )
         
-        print(f"🕷️ 爬虫开始运行...")
+        # print(f"🕷️ 爬虫开始运行...")
         
         # 在单独的线程中运行爬虫（非 daemon，确保正常完成）
         def run_spider_thread():
             try:
                 spider.start()
             except Exception as e:
-                print(f"⚠️ 爬虫线程异常: {e}")
+                # print(f"⚠️ 爬虫线程异常: {e}")
+                pass
         
         spider_thread = threading.Thread(target=run_spider_thread, daemon=False)
         spider_thread.start()
         
         # 等待爬虫完成或达到目标
-        max_wait_time = 180  # 最多等待180秒
+        max_wait_time = 60  # 最多等待60秒（从180秒减少到60秒）
         wait_interval = 0.5  # 每0.5秒检查一次
         elapsed = 0
         
-        print(f"⏳ 等待爬虫完成...")
+        # print(f"⏳ 等待爬虫完成...")
         
         while elapsed < max_wait_time:
+            # 检查线程是否还活着（优先检查）
+            if not spider_thread.is_alive():
+                # print(f"✅ 爬虫线程已自然结束")
+                pass
+                break
+            
             # 检查是否达到目标数量（非无限制模式）
             if not spider.is_unlimited and spider.saved_count >= max_books:
-                print(f"\n{'='*60}")
-                print(f"✅ 已达到目标新增数量 {max_books}，准备停止爬虫")
-                print(f"📊 当前状态: 爬取 {spider.crawled_count} 本，新增 {spider.saved_count} 本，去重 {spider.duplicate_count} 本")
-                print(f"{'='*60}\n")
+                # print(f"\n{'='*60}")
+                pass
+                # print(f"✅ 已达到目标新增数量 {max_books}，准备停止爬虫")
+                # print(f"📊 当前状态: 爬取 {spider.crawled_count} 本，新增 {spider.saved_count} 本，去重 {spider.duplicate_count} 本")
+                # print(f"{'='*60}\n")
                 
                 # 设置停止标志
                 spider._stop_flag = True
@@ -511,54 +544,57 @@ def run_spider(keyword: str, thread_count: int = 3, use_mysql: bool = True, mysq
                 try:
                     spider._stop_crawling()
                 except Exception as e:
-                    print(f"⚠️ 停止爬虫时出错: {e}")
+                    # print(f"⚠️ 停止爬虫时出错: {e}")
+                    pass
                 
-                # 等待线程结束（最多5秒）
-                print(f"⏳ 等待爬虫线程结束...")
-                spider_thread.join(timeout=5)
+                # 等待线程结束（最多3秒，从5秒减少到3秒）
+                # print(f"⏳ 等待爬虫线程结束...")
+                spider_thread.join(timeout=3)
                 
                 if spider_thread.is_alive():
-                    print(f"⚠️ 爬虫线程未能及时结束，强制返回结果")
+                    # print(f"⚠️ 爬虫线程未能及时结束，强制返回结果")
+                    pass
                 else:
-                    print(f"✅ 爬虫线程已正常结束")
+                    # print(f"✅ 爬虫线程已正常结束")
+                    pass
                 
-                break
-            
-            # 检查线程是否还活着
-            if not spider_thread.is_alive():
-                print(f"✅ 爬虫线程已自然结束")
                 break
             
             time.sleep(wait_interval)
             elapsed += wait_interval
         
+        # 超时处理
         if elapsed >= max_wait_time:
-            print(f"⚠️ 等待超时（{max_wait_time}秒），强制返回结果")
+            # print(f"⚠️ 等待超时（{max_wait_time}秒），强制返回结果")
+            pass
             spider._stop_flag = True
             try:
                 spider._stop_crawling()
             except:
                 pass
+            # 强制等待线程结束（最多2秒）
+            spider_thread.join(timeout=2)
         
-        print(f"🕷️ 爬虫运行结束")
+        # print(f"🕷️ 爬虫运行结束")
         
         result_count = len(spider.results) if spider and spider.results else 0
         saved_count = spider.saved_count if spider else 0
         duplicate_count = spider.duplicate_count if spider else 0
         
-        print("\n" + "="*60)
-        print(f"✅ 爬取完成！")
-        print(f"📊 爬取数量: {result_count} 本")
-        print(f"💾 保存数量: {saved_count} 本")
-        print(f"🔄 去重数量: {duplicate_count} 本")
-        print(f"📌 去重关键词: 标题 + 作者")
+        # print("\n" + "="*60)
+        # print(f"✅ 爬取完成！")
+        # print(f"📊 爬取数量: {result_count} 本")
+        # print(f"💾 保存数量: {saved_count} 本")
+        # print(f"🔄 去重数量: {duplicate_count} 本")
+        # print(f"📌 去重关键词: 标题 + 作者")
         if use_mysql:
-            print(f"💾 数据已保存到 MySQL 数据库")
-        print("="*60 + "\n")
+            # print(f"💾 数据已保存到 MySQL 数据库")
+            pass
+        # print("="*60 + "\n")
         
         # 确保返回结果（包含统计信息）
         results = spider.results if spider and spider.results else []
-        print(f"🔚 准备返回 {len(results)} 条结果")
+        # print(f"🔚 准备返回 {len(results)} 条结果")
         
         # 返回结果和统计信息
         return {
@@ -570,14 +606,15 @@ def run_spider(keyword: str, thread_count: int = 3, use_mysql: bool = True, mysq
         }
     
     except Exception as e:
-        print(f"\n❌ 爬虫运行出错: {e}")
+        # print(f"\n❌ 爬虫运行出错: {e}")
+        pass
         import traceback
         traceback.print_exc()
-        print("="*60 + "\n")
+        # print("="*60 + "\n")
         
         # 即使出错也返回已爬取的结果
         if spider and spider.results:
-            print(f"⚠️ 返回已爬取的 {len(spider.results)} 本图书")
+            # print(f"⚠️ 返回已爬取的 {len(spider.results)} 本图书")
             return {
                 'books': spider.results,
                 'total_crawled': len(spider.results),
@@ -594,7 +631,8 @@ def run_spider(keyword: str, thread_count: int = 3, use_mysql: bool = True, mysq
         }
     
     finally:
-        print("🔚 run_spider 函数执行完毕，即将返回")
+        # print("🔚 run_spider 函数执行完毕，即将返回")
+        pass
 
 
 if __name__ == "__main__":
@@ -611,11 +649,13 @@ if __name__ == "__main__":
     results = run_spider(keyword, use_mysql=use_mysql)
     
     # 打印结果
-    print(f"\n总共爬取到 {len(results)} 本图书")
+    # print(f"\n总共爬取到 {len(results)} 本图书")
     if use_mysql:
-        print("✅ 数据已保存到 MySQL 数据库")
+        # print("✅ 数据已保存到 MySQL 数据库")
+        pass
     
     for idx, book in enumerate(results, 1):
-        print(f"\n{idx}. {book.get('标题', '未知')}")
-        print(f"   作者: {book.get('作者', '未知')}")
-        print(f"   价格: {book.get('现价', '未知')}")
+        # print(f"\n{idx}. {book.get('标题', '未知')}")
+        # print(f"   作者: {book.get('作者', '未知')}")
+        # print(f"   价格: {book.get('现价', '未知')}")
+        pass

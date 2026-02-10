@@ -20,9 +20,10 @@ class MySQLPool:
             try:
                 cls._pool.close()
                 cls._pool = None
-                print("✅ MySQL 连接池已关闭")
+                # print("✅ MySQL 连接池已关闭")
             except Exception as e:
-                print(f"⚠️ 关闭 MySQL 连接池失败: {e}")
+                # print(f"⚠️ 关闭 MySQL 连接池失败: {e}")
+                pass
     
     @classmethod
     def initialize(cls, host='localhost', port=3306, user='root', password='123456', database='dangdang_books', 
@@ -40,7 +41,7 @@ class MySQLPool:
         """
         if cls._pool is None:
             try:
-                print(f"🔄 正在连接 MySQL 服务器: {host}:{port}")
+                # print(f"🔄 正在连接 MySQL 服务器: {host}:{port}")
                 
                 # 先连接到 MySQL 服务器（不指定数据库）
                 temp_conn = pymysql.connect(
@@ -51,7 +52,7 @@ class MySQLPool:
                     charset='utf8mb4'
                 )
                 
-                print(f"✅ 成功连接到 MySQL 服务器")
+                # print(f"✅ 成功连接到 MySQL 服务器")
                 
                 # 检查数据库是否存在
                 with temp_conn.cursor() as cursor:
@@ -59,17 +60,19 @@ class MySQLPool:
                     db_exists = cursor.fetchone()
                     
                     if not db_exists:
-                        print(f"⚠️ 数据库 '{database}' 不存在，正在创建...")
+                        # print(f"⚠️ 数据库 '{database}' 不存在，正在创建...")
+                        pass
                         cursor.execute(f"CREATE DATABASE {database} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
                         temp_conn.commit()
-                        print(f"✅ 数据库 '{database}' 创建成功")
+                        # print(f"✅ 数据库 '{database}' 创建成功")
                     else:
-                        print(f"✅ 数据库 '{database}' 已存在")
+                        # print(f"✅ 数据库 '{database}' 已存在")
+                        pass
                 
                 temp_conn.close()
                 
                 # 创建连接池
-                print(f"🔄 正在创建连接池...")
+                # print(f"🔄 正在创建连接池...")
                 cls._pool = PooledDB(
                     creator=pymysql,
                     maxconnections=maxconnections,
@@ -86,28 +89,32 @@ class MySQLPool:
                     autocommit=False  # 显式设置为手动提交，确保事务控制
                 )
                 
-                print(f"✅ 连接池创建成功")
+                # print(f"✅ 连接池创建成功")
                 
                 # 创建表
-                print(f"🔄 正在检查/创建数据表...")
+                # print(f"🔄 正在检查/创建数据表...")
                 cls._create_table()
                 
-                print(f"✅ MySQL 连接池初始化完成: {host}:{port}/{database}")
-                print(f"   连接池配置: 最小空闲={mincached}, 最大空闲={maxcached}, 最大连接={maxconnections}")
+                # print(f"✅ MySQL 连接池初始化完成: {host}:{port}/{database}")
+                # print(f"   连接池配置: 最小空闲={mincached}, 最大空闲={maxcached}, 最大连接={maxconnections}")
                 
             except pymysql.err.OperationalError as e:
                 error_code = e.args[0]
                 if error_code == 1045:
-                    print(f"❌ MySQL 连接失败: 用户名或密码错误")
-                    print(f"   请检查 db_config.py 中的用户名和密码配置")
+                    # print(f"❌ MySQL 连接失败: 用户名或密码错误")
+                    pass
+                    # print(f"   请检查 db_config.py 中的用户名和密码配置")
                 elif error_code == 2003:
-                    print(f"❌ MySQL 连接失败: 无法连接到服务器 {host}:{port}")
-                    print(f"   请确保 MySQL 服务已启动")
+                    # print(f"❌ MySQL 连接失败: 无法连接到服务器 {host}:{port}")
+                    pass
+                    # print(f"   请确保 MySQL 服务已启动")
                 else:
-                    print(f"❌ MySQL 连接失败: {e}")
+                    # print(f"❌ MySQL 连接失败: {e}")
+                    pass
                 raise
             except Exception as e:
-                print(f"❌ MySQL 连接池初始化失败: {e}")
+                # print(f"❌ MySQL 连接池初始化失败: {e}")
+                pass
                 import traceback
                 traceback.print_exc()
                 raise
@@ -144,7 +151,7 @@ class MySQLPool:
             with conn.cursor() as cursor:
                 cursor.execute(create_table_sql)
                 conn.commit()
-                print("✅ 数据表创建/检查完成")
+                # print("✅ 数据表创建/检查完成")
                 
                 # 检查并添加唯一索引（如果表已存在但没有索引）
                 check_index_sql = """
@@ -158,7 +165,8 @@ class MySQLPool:
                 result = cursor.fetchone()
                 
                 if result and result['count'] == 0:
-                    print("⚠️ 检测到表中缺少唯一索引，正在添加...")
+                    # print("⚠️ 检测到表中缺少唯一索引，正在添加...")
+                    pass
                     add_index_sql = """
                     ALTER TABLE books 
                     ADD UNIQUE KEY unique_title_author (title(255), author(100))
@@ -166,18 +174,22 @@ class MySQLPool:
                     try:
                         cursor.execute(add_index_sql)
                         conn.commit()
-                        print("✅ 唯一索引添加成功")
+                        # print("✅ 唯一索引添加成功")
                     except Exception as e:
                         if "Duplicate key name" in str(e):
-                            print("✅ 唯一索引已存在")
+                            # print("✅ 唯一索引已存在")
+                            pass
                         else:
-                            print(f"⚠️ 添加唯一索引失败: {e}")
+                            # print(f"⚠️ 添加唯一索引失败: {e}")
+                            pass
                 else:
-                    print("✅ 唯一索引已存在")
+                    # print("✅ 唯一索引已存在")
+                    pass
                     
             conn.close()
         except Exception as e:
-            print(f"❌ 创建表失败: {e}")
+            # print(f"❌ 创建表失败: {e}")
+            pass
             raise
     
     @classmethod
@@ -251,7 +263,7 @@ class MySQLPool:
             
             if affected_rows > 0:
                 # 插入成功
-                print(f"✅ 成功保存图书: {title}")
+                # print(f"✅ 成功保存图书: {title}")
                 return {
                     'success': True,
                     'is_duplicate': False,
@@ -259,7 +271,7 @@ class MySQLPool:
                 }
             else:
                 # 重复数据，被忽略
-                print(f"⚠️ 图书已存在（去重）: {title} - {author}")
+                # print(f"⚠️ 图书已存在（去重）: {title} - {author}")
                 return {
                     'success': False,
                     'is_duplicate': True,
@@ -275,7 +287,7 @@ class MySQLPool:
                     pass
             
             title = book_data.get('标题', '未知')
-            print(f"⚠️ 图书已存在（唯一索引冲突）: {title}")
+            # print(f"⚠️ 图书已存在（唯一索引冲突）: {title}")
             
             return {
                 'success': False,
@@ -291,7 +303,7 @@ class MySQLPool:
                     pass
             
             title = book_data.get('标题', '未知')
-            print(f"❌ 保存图书失败 [{title}]: {e}")
+            # print(f"❌ 保存图书失败 [{title}]: {e}")
             
             return {
                 'success': False,
@@ -337,7 +349,8 @@ class MySQLPool:
             conn.close()
             return [cls._format_book(row) for row in results]
         except Exception as e:
-            print(f"❌ 获取所有图书失败: {e}")
+            # print(f"❌ 获取所有图书失败: {e}")
+            pass
             return []
         finally:
             if conn:
@@ -371,7 +384,8 @@ class MySQLPool:
             conn.close()
             return [cls._format_book(row) for row in results]
         except Exception as e:
-            print(f"❌ 获取图书失败: {e}")
+            # print(f"❌ 获取图书失败: {e}")
+            pass
             return []
         finally:
             if conn:
@@ -398,7 +412,8 @@ class MySQLPool:
             conn.close()
             return result['count'] if result else 0
         except Exception as e:
-            print(f"❌ 获取图书数量失败: {e}")
+            # print(f"❌ 获取图书数量失败: {e}")
+            pass
             return 0
         finally:
             if conn:
@@ -436,7 +451,8 @@ class MySQLPool:
             
             return stats
         except Exception as e:
-            print(f"❌ 获取统计信息失败: {e}")
+            # print(f"❌ 获取统计信息失败: {e}")
+            pass
             return {'total_books': 0, 'keywords': []}
     
     @classmethod
