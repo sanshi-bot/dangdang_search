@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄小说爬虫</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="fanqie-style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="header-content">
+                <button class="back-btn" @click="goBack">← 返回首页</button>
+                <h1>📚 番茄小说爬虫</h1>
+                <p>推荐列表 | 书籍详情 | 作者搜索</p>
+            </div>
+        </div>
+        
+        <!-- 功能选择区域 -->
+        <div class="function-tabs">
+            <button 
+                @click="currentTab = 'recommend'" 
+                :class="{ active: currentTab === 'recommend' }"
+                class="tab-btn"
+            >
+                📖 推荐列表
+            </button>
+            <button 
+                @click="currentTab = 'detail'" 
+                :class="{ active: currentTab === 'detail' }"
+                class="tab-btn"
+            >
+                📝 书籍详情
+            </button>
+            <button 
+                @click="currentTab = 'author'" 
+                :class="{ active: currentTab === 'author' }"
+                class="tab-btn"
+            >
+                👤 作者搜索
+            </button>
+        </div>
+        
+        <!-- 推荐列表功能 -->
+        <div v-if="currentTab === 'recommend'" class="tab-content">
+            <div class="search-container">
+                <div class="search-box">
+                    <button @click="crawlRecommend" :disabled="loading" class="btn btn-primary">
+                        {{ loading ? '爬取中...' : '爬取推荐列表' }}
+                    </button>
+                    <button @click="showRecommend" :disabled="loading" class="btn btn-secondary">
+                        展示数据库推荐
+                    </button>
+                </div>
+                
+                <div v-if="loading" class="progress-info">
+                    <div class="spinner"></div>
+                    <span>正在爬取中，请稍候...</span>
+                </div>
+            </div>
+            
+            <!-- 推荐列表展示 -->
+            <div v-if="recommendBooks.length > 0" class="results-container">
+                <div class="results-header">
+                    <h2>📖 推荐书籍（共 {{ recommendBooks.length }} 本）</h2>
+                </div>
+                
+                <div class="recommend-list">
+                    <div v-for="(book, index) in recommendBooks" :key="index" class="recommend-item">
+                        <div class="recommend-info">
+                            <h3 class="recommend-title">{{ book.书名 }}</h3>
+                            <p class="recommend-id">ID: {{ book.书籍ID }}</p>
+                        </div>
+                        <div class="recommend-actions">
+                            <button @click="viewDetail(book.书籍ID)" class="action-btn">查看详情</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 书籍详情功能 -->
+        <div v-if="currentTab === 'detail'" class="tab-content">
+            <div class="search-container">
+                <div class="search-box">
+                    <input 
+                        v-model="bookName" 
+                        type="text" 
+                        placeholder="请输入书名" 
+                        @keyup.enter="crawlDetail"
+                        :disabled="loading"
+                        class="search-input"
+                    >
+                    <button @click="crawlDetail" :disabled="loading || !bookName" class="btn btn-primary">
+                        {{ loading ? '爬取中...' : '爬取详情' }}
+                    </button>
+                </div>
+                
+                <div v-if="loading" class="progress-info">
+                    <div class="spinner"></div>
+                    <span>正在爬取中，请稍候...</span>
+                </div>
+            </div>
+            
+            <!-- 书籍详情展示 -->
+            <div v-if="bookDetail" class="detail-container">
+                <div class="detail-card">
+                    <div class="detail-cover">
+                        <img v-if="bookDetail.封面图" :src="bookDetail.封面图" :alt="bookDetail.标题" @error="handleImageError">
+                        <div v-else class="no-cover">📚</div>
+                    </div>
+                    <div class="detail-info">
+                        <h2 class="detail-title">{{ bookDetail.标题 }}</h2>
+                        <p class="detail-meta"><strong>作者：</strong>{{ bookDetail.作者 || '未知' }}</p>
+                        <p class="detail-meta"><strong>分类：</strong>{{ bookDetail.分类 || '未知' }}</p>
+                        <p class="detail-meta"><strong>状态：</strong>{{ bookDetail.状态 || '未知' }}</p>
+                        <p class="detail-meta"><strong>字数：</strong>{{ bookDetail.字数 || '未知' }}</p>
+                        <p class="detail-meta"><strong>章节数：</strong>{{ bookDetail.章节数 || '未知' }}</p>
+                        <p class="detail-meta"><strong>最新章节：</strong>{{ bookDetail.最新章节 || '未知' }}</p>
+                        <p class="detail-meta"><strong>更新时间：</strong>{{ bookDetail.更新时间 || '未知' }}</p>
+                        <div class="detail-desc">
+                            <strong>简介：</strong>
+                            <p>{{ bookDetail.简介 || '暂无简介' }}</p>
+                        </div>
+                        <a v-if="bookDetail.详情页URL" :href="bookDetail.详情页URL" target="_blank" class="detail-link">
+                            访问原网页 →
+                        </a>
+                        <button v-if="bookDetail.作者" @click="searchAuthor(bookDetail.作者)" class="btn btn-secondary" style="margin-top: 15px;">
+                            查看作者其他作品
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 作者搜索功能 -->
+        <div v-if="currentTab === 'author'" class="tab-content">
+            <div class="search-container">
+                <div class="search-box">
+                    <input 
+                        v-model="authorName" 
+                        type="text" 
+                        placeholder="请输入作者名" 
+                        @keyup.enter="crawlAuthor"
+                        :disabled="loading"
+                        class="search-input"
+                    >
+                    <button @click="crawlAuthor" :disabled="loading || !authorName" class="btn btn-primary">
+                        {{ loading ? '搜索中...' : '搜索作者' }}
+                    </button>
+                    <button @click="showAuthorBooks" :disabled="loading || !authorName" class="btn btn-secondary">
+                        展示数据库数据
+                    </button>
+                </div>
+                
+                <div v-if="loading" class="progress-info">
+                    <div class="spinner"></div>
+                    <span>正在搜索中，请稍候...</span>
+                </div>
+            </div>
+            
+            <!-- 作者书籍列表 -->
+            <div v-if="authorBooks.length > 0" class="results-container">
+                <div class="results-header">
+                    <h2>👤 {{ currentAuthor }} 的作品（共 {{ authorBooks.length }} 本）</h2>
+                </div>
+                
+                <div class="author-books-list">
+                    <div v-for="(book, index) in authorBooks" :key="index" class="author-book-item">
+                        <div class="author-book-info">
+                            <h3 class="author-book-title">{{ book.书名 }}</h3>
+                            <p class="author-book-id">ID: {{ book.书籍ID }}</p>
+                        </div>
+                        <div class="author-book-actions">
+                            <button @click="viewDetail(book.书籍ID)" class="action-btn">查看详情</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 空状态 -->
+        <div v-if="!loading && !hasData" class="empty-state">
+            <div class="empty-icon">📚</div>
+            <p v-if="currentTab === 'recommend'">点击"爬取推荐列表"开始获取推荐书籍</p>
+            <p v-else-if="currentTab === 'detail'">输入书名，点击"爬取详情"获取书籍详细信息</p>
+            <p v-else>输入作者名，点击"搜索作者"查找该作者的所有作品</p>
+        </div>
+    </div>
+    
+    <script src="fanqie-app.js"></script>
+</body>
+</html>

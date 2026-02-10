@@ -51,18 +51,20 @@
                 </div>
             </div>
             
-            <!-- 预留模块1 -->
-            <div class="module-card disabled" @click="showComingSoon">
-                <div class="module-icon">🛒</div>
-                <h2 class="module-title">电商数据采集</h2>
-                <p class="module-desc">采集主流电商平台商品信息，价格监控与分析</p>
+            <!-- 番茄小说爬虫模块 -->
+            <div class="module-card" :class="{ 'disabled': !backendOnline }" @click="goToFanqie">
+                <div class="module-icon">📖</div>
+                <h2 class="module-title">番茄小说爬虫</h2>
+                <p class="module-desc">搜索并采集番茄小说信息，支持批量爬取和数据存储</p>
                 <div class="module-features">
-                    <span class="feature-tag">多平台</span>
-                    <span class="feature-tag">价格监控</span>
-                    <span class="feature-tag">数据对比</span>
+                    <span class="feature-tag">关键词搜索</span>
+                    <span class="feature-tag">批量采集</span>
+                    <span class="feature-tag">数据库存储</span>
                 </div>
-                <div class="module-status">
-                    <span class="status-badge">即将上线</span>
+                <div class="module-action">
+                    <button class="action-btn" :disabled="!backendOnline">
+                        {{ backendOnline ? '进入模块 →' : '需要后端服务' }}
+                    </button>
                 </div>
             </div>
             

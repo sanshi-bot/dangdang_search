@@ -54,6 +54,14 @@ def find_available_port(start_port=8000, max_attempts=10):
 # 导入爬虫模块
 try:
     from dangdang import run_spider, DangDangSpider
+    from fanqie import (
+        run_recommend_spider, 
+        run_detail_spider, 
+        run_author_spider,
+        FanQieRecommendSpider,
+        FanQieDetailSpider,
+        FanQieAuthorSpider
+    )
     from db_config import MYSQL_CONFIG, USE_MYSQL
     from mysql_pool import MySQLPool
 except ImportError as e:
@@ -196,6 +204,364 @@ async def root():
 async def health_check():
     """健康检查（不记录访问日志）"""
     return {"status": "healthy"}
+
+
+@app.post("/api/crawl/fanqie/recommend")
+async def crawl_fanqie_recommend():
+    """
+    爬取番茄小说推荐列表（只爬取书名+ID）
+    
+    返回:
+        推荐书籍列表
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        
+        try:
+            results = await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    lambda: run_recommend_spider(
+                        use_mysql=USE_MYSQL,
+                        max_books=50
+                    )
+                ),
+                timeout=60.0
+            )
+        except asyncio.TimeoutError:
+            results = {'books': [], 'total_crawled': 0}
+        
+        books = results.get('books', [])
+        
+        return {
+            "success": True,
+            "count": len(books),
+            "books": books,
+            "total_crawled": results.get('total_crawled', 0)
+        }
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"爬取失败: {str(e)}"
+        )
+
+
+@app.post("/api/crawl/fanqie/detail")
+async def crawl_fanqie_detail(book_name: Optional[str] = None, book_id: Optional[str] = None):
+    """
+    爬取番茄小说详情（根据书名或ID）
+    
+    参数:
+        book_name: 书名
+        book_id: 书籍ID
+    
+    返回:
+        书籍详情
+    """
+    if not book_name and not book_id:
+        raise HTTPException(status_code=400, detail="请提供书名或书籍ID")
+    
+    try:
+        loop = asyncio.get_event_loop()
+        
+        try:
+            result = await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    lambda: run_detail_spider(
+                        book_name=book_name,
+                        book_id=book_id,
+                        use_mysql=USE_MYSQL
+                    )
+                ),
+                timeout=60.0
+            )
+        except asyncio.TimeoutError:
+            result = {'book': None, 'success': False}
+        
+        if result['success']:
+            return {
+                "success": True,
+                "book": result['book']
+            }
+        else:
+            raise HTTPException(status_code=404, detail="未找到书籍")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"爬取失败: {str(e)}"
+        )
+
+
+@app.post("/api/crawl/fanqie/author")
+async def crawl_fanqie_author(author_name: str):
+    """
+    搜索作者的所有书籍
+    
+    参数:
+        author_name: 作者名
+    
+    返回:
+        作者的书籍列表
+    """
+    if not author_name:
+        raise HTTPException(status_code=400, detail="请提供作者名")
+    
+    try:
+        loop = asyncio.get_event_loop()
+        
+        try:
+            results = await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    lambda: run_author_spider(
+                        author_name=author_name,
+                        use_mysql=USE_MYSQL,
+                        max_books=50
+                    )
+                ),
+                timeout=60.0
+            )
+        except asyncio.TimeoutError:
+            results = {'books': [], 'total_crawled': 0, 'author': author_name}
+        
+        books = results.get('books', [])
+        
+        return {
+            "success": True,
+            "author": author_name,
+            "count": len(books),
+            "books": books,
+            "total_crawled": results.get('total_crawled', 0)
+        }
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"搜索失败: {str(e)}"
+        )
+
+
+@app.get("/api/fanqie/recommend")
+async def get_fanqie_recommend(limit: int = 100):
+    """
+    从数据库获取推荐书籍列表
+    
+    参数:
+        limit: 返回数量限制
+    
+    返回:
+        推荐书籍列表
+    """
+    try:
+        books = MySQLPool.get_fanqie_recommend_list(limit=limit)
+        
+        return {
+            "success": True,
+            "count": len(books),
+            "books": books
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"数据库查询失败: {str(e)}"
+        )
+
+
+@app.get("/api/fanqie/detail/{book_id}")
+async def get_fanqie_detail(book_id: str):
+    """
+    从数据库获取书籍详情
+    
+    参数:
+        book_id: 书籍ID
+    
+    返回:
+        书籍详情
+    """
+    try:
+        book = MySQLPool.get_fanqie_book_detail(book_id)
+        
+        if book:
+            return {
+                "success": True,
+                "book": book
+            }
+        else:
+            raise HTTPException(status_code=404, detail="未找到书籍")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"数据库查询失败: {str(e)}"
+        )
+
+
+@app.get("/api/fanqie/author/{author_name}")
+async def get_fanqie_author_books(author_name: str):
+    """
+    从数据库获取作者的所有书籍
+    
+    参数:
+        author_name: 作者名
+    
+    返回:
+        作者的书籍列表
+    """
+    try:
+        books = MySQLPool.get_fanqie_author_books(author_name)
+        
+        return {
+            "success": True,
+            "author": author_name,
+            "count": len(books),
+            "books": books
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"数据库查询失败: {str(e)}"
+        )
+
+
+@app.post("/api/crawl/fanqie", response_model=SearchResponse)
+async def crawl_fanqie_books(request: SearchRequest):
+    """
+    爬取番茄小说 API（爬取并保存到数据库）
+    
+    参数:
+        request: 包含搜索关键词和爬取数量的请求体
+    
+    返回:
+        包含小说列表的响应
+    """
+    keyword = request.keyword.strip()
+    max_books = request.max_books
+    proxy = request.proxy.strip() if request.proxy else None
+    
+    if not keyword:
+        raise HTTPException(status_code=400, detail="关键词不能为空")
+    
+    if len(keyword) > 50:
+        raise HTTPException(status_code=400, detail="关键词过长，请输入50字以内")
+    
+    if max_books < 0 or max_books > 500:
+        raise HTTPException(status_code=400, detail="爬取数量必须在 0-500 之间（0表示爬取所有）")
+    
+    try:
+        # 在线程池中异步运行爬虫，避免阻塞主线程
+        loop = asyncio.get_event_loop()
+        
+        # 使用 asyncio.wait_for 添加超时保护
+        try:
+            results = await asyncio.wait_for(
+                loop.run_in_executor(
+                    executor,
+                    lambda: run_fanqie_spider(
+                        keyword=keyword,
+                        thread_count=3,
+                        use_mysql=USE_MYSQL,
+                        mysql_config=MYSQL_CONFIG,
+                        max_books=max_books,
+                        proxy=proxy
+                    )
+                ),
+                timeout=90.0  # 90秒超时
+            )
+        except asyncio.TimeoutError:
+            # 超时后返回空结果
+            results = []
+        
+        # 确保 results 不为 None
+        if results is None:
+            results = {
+                'books': [],
+                'total_crawled': 0,
+                'total_saved': 0,
+                'total_duplicates': 0,
+                'dedup_key': '标题 + 作者'
+            }
+        
+        books = results.get('books', [])
+        
+        response_data = SearchResponse(
+            success=True,
+            keyword=keyword,
+            count=len(books),
+            books=books,
+            total_crawled=results.get('total_crawled', 0),
+            total_saved=results.get('total_saved', 0),
+            total_duplicates=results.get('total_duplicates', 0),
+            dedup_key=results.get('dedup_key', '标题 + 作者')
+        )
+        
+        return response_data
+    
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="爬取超时，请减少爬取数量或稍后重试"
+        )
+    
+    except Exception as e:
+        # 记录错误日志
+        import traceback
+        traceback.print_exc()
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"爬取失败: {str(e)}"
+        )
+
+
+@app.get("/api/books/fanqie", response_model=SearchResponse)
+async def get_fanqie_books_from_db(keyword: Optional[str] = None, limit: int = 100):
+    """
+    从数据库获取番茄小说数据
+    
+    参数:
+        keyword: 搜索关键词（可选）
+        limit: 返回数量限制
+    
+    返回:
+        包含小说列表的响应
+    """
+    try:
+        # 根据关键词获取数据
+        if keyword:
+            books = MySQLPool.get_fanqie_books_by_keyword(keyword.strip())
+        else:
+            books = MySQLPool.get_all_fanqie_books(limit=limit)
+        
+        return SearchResponse(
+            success=True,
+            keyword=keyword or "全部",
+            count=len(books),
+            books=books
+        )
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"数据库查询失败: {str(e)}"
+        )
 
 
 @app.post("/api/crawl", response_model=SearchResponse)

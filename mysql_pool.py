@@ -146,10 +146,83 @@ class MySQLPool:
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='图书信息表'
         """
         
+        # 创建番茄小说数据表
+        create_fanqie_table_sql = """
+        CREATE TABLE IF NOT EXISTS fanqie_recommend (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            book_name VARCHAR(500) NOT NULL COMMENT '书名',
+            book_id VARCHAR(50) NOT NULL COMMENT '书籍ID',
+            detail_url VARCHAR(500) DEFAULT '' COMMENT '详情页URL',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+            UNIQUE KEY unique_book_id (book_id) COMMENT '书籍ID唯一索引',
+            INDEX idx_book_name (book_name(100))
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='番茄小说推荐列表'
+        """
+        
+        # 创建番茄小说详情表
+        create_fanqie_detail_table_sql = """
+        CREATE TABLE IF NOT EXISTS fanqie_books (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            book_id VARCHAR(50) NOT NULL COMMENT '书籍ID',
+            title VARCHAR(500) NOT NULL COMMENT '标题',
+            author VARCHAR(200) DEFAULT '' COMMENT '作者',
+            category VARCHAR(100) DEFAULT '' COMMENT '分类',
+            status VARCHAR(50) DEFAULT '' COMMENT '状态（连载/完结）',
+            description TEXT COMMENT '简介',
+            word_count VARCHAR(50) DEFAULT '' COMMENT '字数',
+            chapter_count VARCHAR(50) DEFAULT '' COMMENT '章节数',
+            cover_image VARCHAR(500) DEFAULT '' COMMENT '封面图',
+            latest_chapter VARCHAR(500) DEFAULT '' COMMENT '最新章节',
+            update_time VARCHAR(100) DEFAULT '' COMMENT '更新时间',
+            detail_url VARCHAR(500) DEFAULT '' COMMENT '详情页URL',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+            UNIQUE KEY unique_book_id (book_id) COMMENT '书籍ID唯一索引',
+            INDEX idx_title (title(100)),
+            INDEX idx_author (author(100)),
+            INDEX idx_category (category)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='番茄小说详情表'
+        """
+        
+        # 创建作者表
+        create_author_table_sql = """
+        CREATE TABLE IF NOT EXISTS fanqie_authors (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            author_name VARCHAR(200) NOT NULL COMMENT '作者名',
+            book_count INT DEFAULT 0 COMMENT '书籍数量',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+            UNIQUE KEY unique_author_name (author_name) COMMENT '作者名唯一索引'
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='番茄小说作者表'
+        """
+        
+        # 创建作者书籍关联表
+        create_author_book_table_sql = """
+        CREATE TABLE IF NOT EXISTS fanqie_author_books (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            author_name VARCHAR(200) NOT NULL COMMENT '作者名',
+            book_id VARCHAR(50) NOT NULL COMMENT '书籍ID',
+            book_name VARCHAR(500) NOT NULL COMMENT '书名',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+            UNIQUE KEY unique_author_book (author_name, book_id) COMMENT '作者+书籍ID唯一索引',
+            INDEX idx_author (author_name),
+            INDEX idx_book_id (book_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='番茄小说作者书籍关联表'
+        """
+        
         try:
             conn = cls.get_connection()
             with conn.cursor() as cursor:
+                # 创建图书表
                 cursor.execute(create_table_sql)
+                # 创建番茄小说推荐表
+                cursor.execute(create_fanqie_table_sql)
+                # 创建番茄小说详情表
+                cursor.execute(create_fanqie_detail_table_sql)
+                # 创建作者表
+                cursor.execute(create_author_table_sql)
+                # 创建作者书籍关联表
+                cursor.execute(create_author_book_table_sql)
                 conn.commit()
                 # print("✅ 数据表创建/检查完成")
                 
@@ -322,6 +395,580 @@ class MySQLPool:
                     conn.close()
                 except:
                     pass
+    
+    @classmethod
+    def save_fanqie_recommend(cls, book_data: Dict) -> Dict:
+        """
+        保存番茄小说推荐列表（书名+ID）
+        :param book_data: 书籍数据字典
+        :return: 保存结果
+        """
+        sql = """
+        INSERT IGNORE INTO fanqie_recommend (
+            book_name, book_id, detail_url
+        ) VALUES (%s, %s, %s)
+        """
+        
+        conn = None
+        cursor = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(sql, (
+                book_data.get('书名', ''),
+                book_data.get('书籍ID', ''),
+                book_data.get('详情页URL', '')
+            ))
+            
+            conn.commit()
+            affected_rows = cursor.rowcount
+            
+            cursor.close()
+            conn.close()
+            
+            return {
+                'success': affected_rows > 0,
+                'is_duplicate': affected_rows == 0
+            }
+            
+        except Exception as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
+            return {
+                'success': False,
+                'is_duplicate': False
+            }
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def save_fanqie_book_detail(cls, book_data: Dict) -> Dict:
+        """
+        保存番茄小说详情
+        :param book_data: 书籍详情数据
+        :return: 保存结果
+        """
+        sql = """
+        INSERT INTO fanqie_books (
+            book_id, title, author, category, status,
+            description, word_count, chapter_count, cover_image,
+            latest_chapter, update_time, detail_url
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            title = VALUES(title),
+            author = VALUES(author),
+            category = VALUES(category),
+            status = VALUES(status),
+            description = VALUES(description),
+            word_count = VALUES(word_count),
+            chapter_count = VALUES(chapter_count),
+            cover_image = VALUES(cover_image),
+            latest_chapter = VALUES(latest_chapter),
+            update_time = VALUES(update_time),
+            detail_url = VALUES(detail_url)
+        """
+        
+        conn = None
+        cursor = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(sql, (
+                book_data.get('书籍ID', ''),
+                book_data.get('标题', ''),
+                book_data.get('作者', ''),
+                book_data.get('分类', ''),
+                book_data.get('状态', ''),
+                book_data.get('简介', ''),
+                book_data.get('字数', ''),
+                book_data.get('章节数', ''),
+                book_data.get('封面图', ''),
+                book_data.get('最新章节', ''),
+                book_data.get('更新时间', ''),
+                book_data.get('详情页URL', '')
+            ))
+            
+            conn.commit()
+            
+            cursor.close()
+            conn.close()
+            
+            return {
+                'success': True,
+                'message': '保存成功'
+            }
+            
+        except Exception as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
+            return {
+                'success': False,
+                'message': f'保存失败: {str(e)}'
+            }
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def save_fanqie_author(cls, author_name: str, book_id: str) -> Dict:
+        """
+        保存作者信息
+        :param author_name: 作者名
+        :param book_id: 书籍ID
+        :return: 保存结果
+        """
+        sql = """
+        INSERT INTO fanqie_authors (author_name, book_count)
+        VALUES (%s, 1)
+        ON DUPLICATE KEY UPDATE
+            book_count = book_count + 1
+        """
+        
+        conn = None
+        cursor = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(sql, (author_name,))
+            conn.commit()
+            
+            cursor.close()
+            conn.close()
+            
+            return {
+                'success': True
+            }
+            
+        except Exception as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
+            return {
+                'success': False
+            }
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def save_fanqie_author_book(cls, author_name: str, book_id: str, book_name: str) -> Dict:
+        """
+        保存作者书籍关联
+        :param author_name: 作者名
+        :param book_id: 书籍ID
+        :param book_name: 书名
+        :return: 保存结果
+        """
+        sql = """
+        INSERT IGNORE INTO fanqie_author_books (
+            author_name, book_id, book_name
+        ) VALUES (%s, %s, %s)
+        """
+        
+        conn = None
+        cursor = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            
+            cursor.execute(sql, (author_name, book_id, book_name))
+            conn.commit()
+            
+            # 同时更新作者表
+            cls.save_fanqie_author(author_name, book_id)
+            
+            cursor.close()
+            conn.close()
+            
+            return {
+                'success': True
+            }
+            
+        except Exception as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
+            return {
+                'success': False
+            }
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def get_fanqie_recommend_list(cls, limit: int = 100) -> List[Dict]:
+        """
+        获取推荐书籍列表
+        :param limit: 返回数量限制
+        :return: 书籍列表
+        """
+        sql = """
+        SELECT * FROM fanqie_recommend 
+        ORDER BY created_at DESC 
+        LIMIT %s
+        """
+        
+        conn = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(sql, (limit,))
+            results = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            
+            return [{
+                'id': row.get('id'),
+                '书名': row.get('book_name', ''),
+                '书籍ID': row.get('book_id', ''),
+                '详情页URL': row.get('detail_url', ''),
+                '创建时间': row.get('created_at')
+            } for row in results]
+        except Exception as e:
+            return []
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def get_fanqie_book_detail(cls, book_id: str) -> Optional[Dict]:
+        """
+        根据书籍ID获取详情
+        :param book_id: 书籍ID
+        :return: 书籍详情
+        """
+        sql = """
+        SELECT * FROM fanqie_books 
+        WHERE book_id = %s
+        """
+        
+        conn = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(sql, (book_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            if result:
+                return {
+                    'id': result.get('id'),
+                    '书籍ID': result.get('book_id', ''),
+                    '标题': result.get('title', ''),
+                    '作者': result.get('author', ''),
+                    '分类': result.get('category', ''),
+                    '状态': result.get('status', ''),
+                    '简介': result.get('description', ''),
+                    '字数': result.get('word_count', ''),
+                    '章节数': result.get('chapter_count', ''),
+                    '封面图': result.get('cover_image', ''),
+                    '最新章节': result.get('latest_chapter', ''),
+                    '更新时间': result.get('update_time', ''),
+                    '详情页URL': result.get('detail_url', ''),
+                    '创建时间': result.get('created_at'),
+                    '更新时间': result.get('updated_at')
+                }
+            return None
+        except Exception as e:
+            return None
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def get_fanqie_author_books(cls, author_name: str) -> List[Dict]:
+        """
+        获取作者的所有书籍
+        :param author_name: 作者名
+        :return: 书籍列表
+        """
+        sql = """
+        SELECT * FROM fanqie_author_books 
+        WHERE author_name = %s
+        ORDER BY created_at DESC
+        """
+        
+        conn = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(sql, (author_name,))
+            results = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            
+            return [{
+                'id': row.get('id'),
+                '作者': row.get('author_name', ''),
+                '书籍ID': row.get('book_id', ''),
+                '书名': row.get('book_name', ''),
+                '创建时间': row.get('created_at')
+            } for row in results]
+        except Exception as e:
+            return []
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def save_fanqie_book(cls, book_data: Dict) -> Dict:
+        """
+        保存单本番茄小说数据（带去重检查）
+        使用唯一索引实现数据库层面的去重
+        :param book_data: 小说数据字典
+        :return: 保存结果字典 {'success': bool, 'is_duplicate': bool, 'message': str}
+        """
+        # 使用 INSERT IGNORE 来忽略重复数据
+        sql = """
+        INSERT IGNORE INTO fanqie_books (
+            title, author, category, status, 
+            description, word_count, chapter_count, cover_image, 
+            latest_chapter, update_time, detail_url, 
+            search_keyword, source
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        )
+        """
+        
+        conn = None
+        cursor = None
+        try:
+            title = book_data.get('标题', '未知')
+            author = book_data.get('作者', '').strip()
+            
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            
+            # 执行插入
+            cursor.execute(sql, (
+                book_data.get('标题', ''),
+                author,
+                book_data.get('分类', ''),
+                book_data.get('状态', ''),
+                book_data.get('简介', ''),
+                book_data.get('字数', ''),
+                book_data.get('章节数', ''),
+                book_data.get('封面图', ''),
+                book_data.get('最新章节', ''),
+                book_data.get('更新时间', ''),
+                book_data.get('详情页URL', ''),
+                book_data.get('搜索关键词', ''),
+                book_data.get('来源', '番茄小说')
+            ))
+            
+            conn.commit()
+            
+            # 检查是否插入成功（affected_rows = 0 表示重复）
+            affected_rows = cursor.rowcount
+            
+            cursor.close()
+            conn.close()
+            
+            if affected_rows > 0:
+                # 插入成功
+                return {
+                    'success': True,
+                    'is_duplicate': False,
+                    'message': f'成功保存: {title}'
+                }
+            else:
+                # 重复数据，被忽略
+                return {
+                    'success': False,
+                    'is_duplicate': True,
+                    'message': f'小说已存在: {title}'
+                }
+            
+        except pymysql.err.IntegrityError as e:
+            # 唯一索引冲突
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
+            
+            title = book_data.get('标题', '未知')
+            
+            return {
+                'success': False,
+                'is_duplicate': True,
+                'message': f'小说已存在: {title}'
+            }
+            
+        except Exception as e:
+            if conn:
+                try:
+                    conn.rollback()
+                except:
+                    pass
+            
+            title = book_data.get('标题', '未知')
+            
+            return {
+                'success': False,
+                'is_duplicate': False,
+                'message': f'保存失败: {str(e)}'
+            }
+            
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def get_all_fanqie_books(cls, limit: int = 100, offset: int = 0) -> List[Dict]:
+        """
+        获取所有番茄小说（分页）
+        :param limit: 每页数量
+        :param offset: 偏移量
+        :return: 小说数据列表
+        """
+        sql = """
+        SELECT * FROM fanqie_books 
+        ORDER BY created_at DESC 
+        LIMIT %s OFFSET %s
+        """
+        
+        conn = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(sql, (limit, offset))
+            results = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return [cls._format_fanqie_book(row) for row in results]
+        except Exception as e:
+            return []
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def get_fanqie_books_by_keyword(cls, keyword: str) -> List[Dict]:
+        """
+        根据搜索关键词获取番茄小说
+        :param keyword: 搜索关键词
+        :return: 小说数据列表
+        """
+        sql = """
+        SELECT * FROM fanqie_books 
+        WHERE search_keyword = %s 
+        ORDER BY created_at DESC
+        """
+        
+        conn = None
+        try:
+            conn = cls.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(sql, (keyword,))
+            results = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return [cls._format_fanqie_book(row) for row in results]
+        except Exception as e:
+            return []
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+    
+    @classmethod
+    def _format_fanqie_book(cls, row: Dict) -> Dict:
+        """
+        格式化数据库行为番茄小说数据字典
+        :param row: 数据库行
+        :return: 格式化后的小说数据
+        """
+        if not row:
+            return {}
+        
+        return {
+            'id': row.get('id'),
+            '标题': row.get('title', ''),
+            '作者': row.get('author', ''),
+            '分类': row.get('category', ''),
+            '状态': row.get('status', ''),
+            '简介': row.get('description', ''),
+            '字数': row.get('word_count', ''),
+            '章节数': row.get('chapter_count', ''),
+            '封面图': row.get('cover_image', ''),
+            '最新章节': row.get('latest_chapter', ''),
+            '更新时间': row.get('update_time', ''),
+            '详情页URL': row.get('detail_url', ''),
+            '搜索关键词': row.get('search_keyword', ''),
+            '来源': row.get('source', '番茄小说'),
+            '创建时间': row.get('created_at'),
+            '更新时间': row.get('updated_at')
+        }
     
     @classmethod
     def get_all_books(cls, limit: int = 100, offset: int = 0) -> List[Dict]:

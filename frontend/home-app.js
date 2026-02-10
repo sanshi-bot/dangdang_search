@@ -63,6 +63,20 @@ createApp({
         },
         
         /**
+         * 跳转到番茄小说页面
+         */
+        async goToFanqie() {
+            // 先检查后端是否在线
+            if (!this.backendOnline) {
+                alert('后端服务未启动，请先启动后端服务！\n\n运行 start_backend.bat 或 python backend/api.py');
+                return;
+            }
+            
+            // 跳转到番茄小说页面
+            window.location.href = 'fanqie.html';
+        },
+        
+        /**
          * 显示即将上线提示
          */
         showComingSoon() {
